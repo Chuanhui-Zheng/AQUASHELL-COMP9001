@@ -1,3 +1,6 @@
+## Start program with command
+python/python3 main.py
+
 # AQUASHELL
 
 AQUASHELL is a terminal-based aquarium and fishing game built entirely in Python.
