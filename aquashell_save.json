@@ -1,0 +1,70 @@
+{
+  "version": 6,
+  "coins": 9999,
+  "inventory": [
+    {
+      "name": "Little Dory",
+      "shiny": false
+    },
+    {
+      "name": "Tiny Angelfish",
+      "shiny": false
+    },
+    {
+      "name": "Round Fish",
+      "shiny": false
+    },
+    {
+      "name": "Starglow Fish",
+      "shiny": false
+    },
+    {
+      "name": "Shell Snail",
+      "shiny": false
+    },
+    {
+      "name": "Seahorse",
+      "shiny": false
+    },
+    {
+      "name": "Starfish",
+      "shiny": true
+    },
+    {
+      "name": "Jellyfish",
+      "shiny": false
+    },
+    {
+      "name": "Paralichthys olivaceus",
+      "shiny": false
+    },
+    {
+      "name": "Siamese fighting fish",
+      "shiny": true
+    },
+    {
+      "name": "Dolphin",
+      "shiny": true
+    },
+    {
+      "name": "Manta Ray",
+      "shiny": false
+    },
+    {
+      "name": "Celestial Whale",
+      "shiny": false
+    },
+    {
+      "name": "Hammerhead shark",
+      "shiny": true
+    },
+    {
+      "name": "Megalodon",
+      "shiny": false
+    }
+  ],
+  "rod_level": 5,
+  "tank_capacity": 999,
+  "capacity_upgrade_count": 999,
+  "visits": 0
+}
