@@ -4,7 +4,7 @@
   "inventory": [
     {
       "name": "Little Dory",
-      "shiny": false
+      "shiny": true
     },
     {
       "name": "Tiny Angelfish",
@@ -12,7 +12,7 @@
     },
     {
       "name": "Round Fish",
-      "shiny": false
+      "shiny": true
     },
     {
       "name": "Starglow Fish",
@@ -20,11 +20,7 @@
     },
     {
       "name": "Shell Snail",
-      "shiny": false
-    },
-    {
-      "name": "Seahorse",
-      "shiny": false
+      "shiny": true
     },
     {
       "name": "Starfish",
@@ -32,35 +28,35 @@
     },
     {
       "name": "Jellyfish",
+      "shiny": true
+    },
+    {
+      "name": "Paperfish",
       "shiny": false
     },
     {
-      "name": "Paralichthys olivaceus",
-      "shiny": false
-    },
-    {
-      "name": "Siamese fighting fish",
+      "name": "Goldfish",
       "shiny": true
     },
     {
       "name": "Dolphin",
-      "shiny": true
+      "shiny": false
     },
     {
       "name": "Manta Ray",
       "shiny": false
     },
     {
-      "name": "Celestial Whale",
+      "name": "Whale",
       "shiny": false
     },
     {
-      "name": "Hammerhead shark",
+      "name": "Squid",
       "shiny": true
     },
     {
-      "name": "Megalodon",
-      "shiny": false
+      "name": "Shark",
+      "shiny": true
     }
   ],
   "rod_level": 5,

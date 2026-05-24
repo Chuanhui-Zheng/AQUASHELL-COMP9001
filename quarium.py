@@ -9,7 +9,7 @@ import tty
 from dataclasses import dataclass
 
 import handbook
-from handbook import CYAN, RESET, YELLOW, sprite_height, sprite_lines, sprite_width
+from handbook import CYAN, GREEN, MAGENTA, RED, RESET, YELLOW, sprite_height, sprite_lines, sprite_width
 
 
 @dataclass
@@ -47,10 +47,13 @@ def make_swimmer(creature, width, lane_y):
     if creature.name == "Dolphin":
         lane_y = random.choice([5, 6, 7])
         vertical_direction = random.choice([-1, 1])
+    elif creature.name == "Starfish":
+        vertical_direction = random.choice([-1, 1])
     else:
         vertical_direction = 0
 
-    fast_names = {"Manta Ray", "Hammerhead shark", "Megalodon"}
+    fast_names = {"Manta Ray", "Squid", "Shark", "Whale"}
+    rainbow_colors = [RED, YELLOW, GREEN, CYAN, MAGENTA]
 
     return {
         "creature": creature,
@@ -58,8 +61,10 @@ def make_swimmer(creature, width, lane_y):
         "y": lane_y,
         "direction": direction,
         "vertical_direction": vertical_direction,
+        "vertical_speed": random.choice([7, 8, 9]) if creature.name == "Starfish" else 1,
         "speed": 1 if creature.name in fast_names else random.choice([3, 4, 5]),
         "turn_after": random.randint(35, 95),
+        "shiny_offset": random.randint(0, len(rainbow_colors) * 3 - 1) if creature.shiny else 0,
     }
 
 
@@ -70,20 +75,38 @@ def make_swimmers(creatures, width, height):
 
     top_zone_names = {
         "Jellyfish",
-        "Seahorse",
-        "Manta Ray",
+        "Whale"
     }
 
     middle_zone_names = {
-        "Paralichthys olivaceus",
-        "Siamese fighting fish",
+        "Paperfish",
+        "Goldfish",
+        "Seahorse",
     }
 
     bottom_zone_names = {
-        "Celestial Whale",
-        "Hammerhead shark",
-        "Megalodon",
+        "Squid",
+        "Shark",
+        "Manta Ray",
     }
+
+    def pick_zone_y(preferred_min, preferred_max, fish_height):
+        overall_min = 5
+        overall_max = max(overall_min, height - fish_height - 4)
+
+        preferred_min = max(overall_min, preferred_min)
+        preferred_max = min(overall_max, preferred_max)
+
+        if preferred_min > preferred_max:
+            return random.randint(overall_min, overall_max)
+
+        spill = max(2, height // 12)
+        spill_min = max(overall_min, preferred_min - spill)
+        spill_max = min(overall_max, preferred_max + spill)
+
+        if random.random() < 0.8:
+            return random.randint(preferred_min, preferred_max)
+        return random.randint(spill_min, spill_max)
 
     ordered_creatures = sorted(
         creatures,
@@ -107,13 +130,13 @@ def make_swimmers(creatures, width, height):
             y = max(6, height - fish_height - 4)
 
         elif creature.name in top_zone_names:
-            y = random.randint(top_min, top_max)
+            y = pick_zone_y(top_min, top_max, fish_height)
 
         elif creature.name in middle_zone_names:
-            y = random.randint(middle_min, middle_max)
+            y = pick_zone_y(middle_min, middle_max, fish_height)
 
         elif creature.name in bottom_zone_names:
-            y = random.randint(bottom_min, bottom_max)
+            y = pick_zone_y(bottom_min, bottom_max, fish_height)
 
         elif lane_y + fish_height > bottom_limit:
             lane_y = random.randint(6, max(6, bottom_limit - fish_height))
@@ -142,40 +165,110 @@ def draw_text(canvas, x, y, text, color=None):
             canvas[y][column] = f"{color}{char}{RESET}" if color else char
 
 
+def mirror_braille_char(char):
+    code = ord(char)
+
+    # Braille Unicode range: ⠀ to ⣿.
+    # Each braille character contains internal dots, so we need to
+    # mirror the dots inside the character as well as reversing the line.
+    if 0x2800 <= code <= 0x28FF:
+        pattern = code - 0x2800
+
+        dot_pairs = [
+            (0, 3),  # dot 1 <-> dot 4
+            (1, 4),  # dot 2 <-> dot 5
+            (2, 5),  # dot 3 <-> dot 6
+            (6, 7),  # dot 7 <-> dot 8
+        ]
+
+        mirrored_pattern = pattern
+
+        for left, right in dot_pairs:
+            left_bit = (pattern >> left) & 1
+            right_bit = (pattern >> right) & 1
+
+            if left_bit != right_bit:
+                mirrored_pattern ^= 1 << left
+                mirrored_pattern ^= 1 << right
+
+        return chr(0x2800 + mirrored_pattern)
+
+    return char
+
+
 def mirror_sprite(sprite):
-    mirrors = str.maketrans("()[]{}<>/\\", ")(][}{><\\/")
-    return "\n".join(line.translate(mirrors)[::-1] for line in str(sprite).splitlines())
+    lines = str(sprite).splitlines()
+    width = max((len(line) for line in lines), default=0)
+
+    mirror_map = str.maketrans({
+        "(": ")",
+        ")": "(",
+        "[": "]",
+        "]": "[",
+        "{": "}",
+        "}": "{",
+        "<": ">",
+        ">": "<",
+        "/": "\\",
+        "\\": "/",
+    })
+
+    mirrored_lines = []
+
+    for line in lines:
+        padded = line.ljust(width)
+
+        mirrored_line = "".join(
+            mirror_braille_char(char.translate(mirror_map))
+            for char in padded
+        )[::-1]
+
+        mirrored_lines.append(mirrored_line)
+
+    return "\n".join(mirrored_lines)
 
 
 def oriented_sprite(creature, direction):
-    if creature.name in {"Starfish", "Jellyfish"}:
-        return creature.sprite
-
     if direction < 0:
         return creature.sprite if creature.starts_left else mirror_sprite(creature.sprite)
 
     return mirror_sprite(creature.sprite) if creature.starts_left else creature.sprite
 
 
-def draw_sprite(canvas, x, y, creature, direction):
-    color = YELLOW if creature.shiny else None
+def draw_sprite(canvas, x, y, creature, direction, color=None):
     sprite = oriented_sprite(creature, direction)
     lines = str(sprite).splitlines()
 
     if creature.shiny:
         width = sprite_width({"sprite": sprite})
-        draw_text(canvas, x - 2, y - 1, "✦" + " " * max(0, width) + "✦", CYAN)
-        draw_text(canvas, x - 2, y + len(lines), "✦" + " " * max(0, width) + "✦", CYAN)
 
     for row, line in enumerate(lines):
         draw_text(canvas, x, y + row, line, color)
 
 
-def update_swimmer(swimmer, width, frame_number):
+def update_swimmer(swimmer, width, height, frame_number):
     creature = swimmer["creature"]
     fish_width = sprite_width({"sprite": creature.sprite})
+    fish_height = sprite_height({"sprite": creature.sprite})
 
-    if creature.stationary:
+    if creature.stationary and creature.name != "Starfish":
+        return
+
+    if creature.name == "Starfish":
+        if frame_number % (swimmer["speed"] * swimmer.get("vertical_speed", 1)) == 0:
+            bottom_limit = max(5, height - fish_height - 2)
+            top_limit = max(5, bottom_limit - 4)
+
+            swimmer["y"] += swimmer.get("vertical_direction", 1)
+
+            if swimmer["y"] <= top_limit:
+                swimmer["y"] = top_limit
+                swimmer["vertical_direction"] = 1
+
+            elif swimmer["y"] >= bottom_limit:
+                swimmer["y"] = bottom_limit
+                swimmer["vertical_direction"] = -1
+
         return
 
     if creature.capacity > 1:
@@ -214,6 +307,7 @@ def aquarium_frame(data, swimmers, frame_number):
     width, height = terminal_size()
     waterline = 4
     canvas = [[" " for _ in range(width)] for _ in range(height)]
+    rainbow_colors = [RED, YELLOW, GREEN, CYAN, MAGENTA]
 
     for x in range(width):
         canvas[0][x] = "="
@@ -229,8 +323,13 @@ def aquarium_frame(data, swimmers, frame_number):
     draw_text(canvas, width - 24, 2, f"Coins: {data['coins']}", CYAN)
 
     for swimmer in sorted(swimmers, key=lambda item: item["creature"].capacity, reverse=True):
-        update_swimmer(swimmer, width, frame_number)
-        draw_sprite(canvas, swimmer["x"], swimmer["y"], swimmer["creature"], swimmer["direction"])
+        update_swimmer(swimmer, width, height, frame_number)
+        creature = swimmer["creature"]
+        color = None
+        if creature.shiny:
+            offset = swimmer.get("shiny_offset", 0)
+            color = rainbow_colors[((frame_number + offset) // 3) % len(rainbow_colors)]
+        draw_sprite(canvas, swimmer["x"], swimmer["y"], creature, swimmer["direction"], color)
 
     bubbles = [
         (width // 5, height - 7),
