@@ -25,8 +25,12 @@ class Creature:
     stationary: bool = False
 
 
-def clear_screen():
+def hard_clear_screen():
     os.system("cls" if os.name == "nt" else "clear")
+
+
+def clear_screen():
+    print("\033[H", end="")
 
 
 def terminal_size():
@@ -73,22 +77,9 @@ def make_swimmers(creatures, width, height):
     lane_y = 6
     bottom_limit = height - 5
 
-    top_zone_names = {
-        "Jellyfish",
-        "Whale"
-    }
-
-    middle_zone_names = {
-        "Paperfish",
-        "Goldfish",
-        "Seahorse",
-    }
-
-    bottom_zone_names = {
-        "Squid",
-        "Shark",
-        "Manta Ray",
-    }
+    top_zone_names = {"Jellyfish", "Whale"}
+    middle_zone_names = {"Paperfish", "Goldfish", "Seahorse"}
+    bottom_zone_names = {"Squid", "Shark", "Manta Ray"}
 
     def pick_zone_y(preferred_min, preferred_max, fish_height):
         overall_min = 5
@@ -128,20 +119,15 @@ def make_swimmers(creatures, width, height):
 
         if creature.bottom:
             y = max(6, height - fish_height - 4)
-
         elif creature.name in top_zone_names:
             y = pick_zone_y(top_min, top_max, fish_height)
-
         elif creature.name in middle_zone_names:
             y = pick_zone_y(middle_min, middle_max, fish_height)
-
         elif creature.name in bottom_zone_names:
             y = pick_zone_y(bottom_min, bottom_max, fish_height)
-
         elif lane_y + fish_height > bottom_limit:
             lane_y = random.randint(6, max(6, bottom_limit - fish_height))
             y = lane_y
-
         else:
             y = lane_y
 
@@ -168,17 +154,14 @@ def draw_text(canvas, x, y, text, color=None):
 def mirror_braille_char(char):
     code = ord(char)
 
-    # Braille Unicode range: ⠀ to ⣿.
-    # Each braille character contains internal dots, so we need to
-    # mirror the dots inside the character as well as reversing the line.
     if 0x2800 <= code <= 0x28FF:
         pattern = code - 0x2800
 
         dot_pairs = [
-            (0, 3),  # dot 1 <-> dot 4
-            (1, 4),  # dot 2 <-> dot 5
-            (2, 5),  # dot 3 <-> dot 6
-            (6, 7),  # dot 7 <-> dot 8
+            (0, 3),
+            (1, 4),
+            (2, 5),
+            (6, 7),
         ]
 
         mirrored_pattern = pattern
@@ -239,9 +222,6 @@ def draw_sprite(canvas, x, y, creature, direction, color=None):
     sprite = oriented_sprite(creature, direction)
     lines = str(sprite).splitlines()
 
-    if creature.shiny:
-        width = sprite_width({"sprite": sprite})
-
     for row, line in enumerate(lines):
         draw_text(canvas, x, y + row, line, color)
 
@@ -264,7 +244,6 @@ def update_swimmer(swimmer, width, height, frame_number):
             if swimmer["y"] <= top_limit:
                 swimmer["y"] = top_limit
                 swimmer["vertical_direction"] = 1
-
             elif swimmer["y"] >= bottom_limit:
                 swimmer["y"] = bottom_limit
                 swimmer["vertical_direction"] = -1
@@ -324,12 +303,22 @@ def aquarium_frame(data, swimmers, frame_number):
 
     for swimmer in sorted(swimmers, key=lambda item: item["creature"].capacity, reverse=True):
         update_swimmer(swimmer, width, height, frame_number)
+
         creature = swimmer["creature"]
         color = None
+
         if creature.shiny:
             offset = swimmer.get("shiny_offset", 0)
             color = rainbow_colors[((frame_number + offset) // 3) % len(rainbow_colors)]
-        draw_sprite(canvas, swimmer["x"], swimmer["y"], creature, swimmer["direction"], color)
+
+        draw_sprite(
+            canvas,
+            swimmer["x"],
+            swimmer["y"],
+            creature,
+            swimmer["direction"],
+            color
+        )
 
     bubbles = [
         (width // 5, height - 7),
@@ -416,6 +405,7 @@ def collection_items(data):
 
 def print_collection_items(items):
     by_kind = {}
+
     for index, (name, quantity, item) in enumerate(items, start=1):
         by_kind.setdefault(item["kind"], []).append((index, name, quantity, item))
 
@@ -429,17 +419,21 @@ def print_collection_items(items):
 
 def parse_release_command(command, items):
     parts = command.split()
+
     if len(parts) != 3 or parts[0].lower() != "release":
         return None, None, None
+
     if not parts[1].isdigit() or not parts[2].isdigit():
         return None, None, None
 
     index = int(parts[1])
     quantity = int(parts[2])
+
     if not 1 <= index <= len(items):
         return None, None, None
 
     name, owned, item = items[index - 1]
+
     if quantity <= 0 or quantity > owned:
         return None, None, None
 
@@ -448,12 +442,14 @@ def parse_release_command(command, items):
 
 def release_creature(data, command, items, pause):
     name, quantity, item = parse_release_command(command, items)
+
     if not name:
         pause("Use: release number quantity. Press Enter...")
         return
 
     removed = handbook.remove_creatures(data, name, quantity, allow_shiny=True)
-    clear_screen()
+
+    hard_clear_screen()
     print(RELEASE_ART)
     print()
     print(f"The fish release failed. {removed} {name} was already cooked and ended up in my belly.")
@@ -462,9 +458,10 @@ def release_creature(data, command, items, pause):
 
 def show_collection(data, pause):
     while True:
-        clear_screen()
+        hard_clear_screen()
         print(color("Your Collection", CYAN))
         print("=" * 40)
+
         items = collection_items(data)
 
         if not items:
@@ -478,6 +475,7 @@ def show_collection(data, pause):
         print("Press Enter to return.")
 
         command = input("\nCollection command: ").strip()
+
         if command == "":
             return
 
@@ -506,12 +504,16 @@ def build_creatures(data):
 
 
 def run_aquarium(data, swimmers):
+    print("\033[2J\033[H", end="")
+
     with RawTerminal():
         frame_number = 0
+
         while True:
-            clear_screen()
+            print("\033[H", end="")
             print(aquarium_frame(data, swimmers, frame_number))
             print("\nPress C for collection. Press Enter to return.")
+
             key = key_pressed()
 
             if key in {"\n", "\r"}:
@@ -539,13 +541,14 @@ def visit_aquarium(data, pause):
                 break
 
             show_collection(data, pause)
+
             creatures = build_creatures(data)
             width, height = terminal_size()
             swimmers = make_swimmers(creatures, width, height)
 
     except (termios.error, OSError):
         for frame_number in range(80):
-            clear_screen()
+            print("\033[H", end="")
             print(aquarium_frame(data, swimmers, frame_number))
             time.sleep(0.12)
 

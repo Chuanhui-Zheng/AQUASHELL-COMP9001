@@ -54,9 +54,9 @@ ROD_RULES = {
     5: {"name": "Mythic Rod", "coins": (24, 40), "big_chance": 0.15},
 }
 
-SMALL_CHANCE = 0.35
-BIG_CHANCE = 0.15
-COIN_CHANCE = 0.50
+SMALL_CHANCE = 0.1
+BIG_CHANCE = 0.8
+COIN_CHANCE = 0.1
 
 
 class RawTerminal:
@@ -93,13 +93,16 @@ def render_pointer_bar(position, width=31):
 
     cells = ["-" for _ in range(width)]
 
-    left_box = center - 1
-    right_box = center
+    target_boxes = [
+        center - 1,
+        center,
+        center + 1
+    ]
 
-    cells[left_box] = "□"
-    cells[right_box] = "□"
+    for box in target_boxes:
+        cells[box] = "□"
 
-    if position == left_box or position == right_box:
+    if position in target_boxes:
         cells[position] = "■"
     else:
         cells[position] = "^"
